@@ -137,3 +137,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ]
 }
+
+# neo4j credentials
+NEO4J_URI = "bolt://localhost:7687"
+NEO4J_USERNAME = "neo4j"
+NEO4J_PASSWORD = "password"
