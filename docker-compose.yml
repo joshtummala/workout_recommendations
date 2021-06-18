@@ -1,0 +1,34 @@
+version: "3.9"
+   
+services:
+    db:
+        image: postgres
+        volumes:
+            - ./data/db:/var/lib/postgresql/data
+        environment:
+            - POSTGRES_DB=postgres
+            - POSTGRES_USER=workout
+            - POSTGRES_PASSWORD=abc123
+    web:
+        build: .
+        command: python manage.py runserver 0.0.0.0:8000
+        volumes:
+            - .:/code
+        ports:
+            - "8000:8000"
+        depends_on:
+            - db
+    neo4j:
+        image: neo4j:4.2.7-community
+        ports:
+            - "7474:7474"
+            - "7687:7687"
+        environment:
+            - NEO4J_apoc_export_file_enabled=true
+            - NEO4J_apoc_import_file_enabled=true
+            - NEO4J_apoc_import_file_use__neo4j__config=true
+            - NEO4JLABS_PLUGINS=["apoc"]
+        volumes:
+            - .:/plugins
+            - ./data:/data
+            - .:/import
