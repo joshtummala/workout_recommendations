@@ -1,6 +1,5 @@
-.data/
-plugins/
-import/
+neo4j/
+postgres-data/
 
 *.jar
 
