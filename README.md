@@ -9,11 +9,15 @@ Then run the command
 ```
 docker-compose up
 ```
-This should start the app running on port 8000 on your computer.
+This should start the app running on port 8000 on your computer and start neo4j running on port 7474.
 
 To stop it running just type Ctrl+C in the terminal you started it in and type 
 ```
 docker-compose down
+```
+To remove all the docker images just type
+```
+docker rmi $(docker images -a -q)
 ```
 
 ### Updating the database after creating a new Model or updating one

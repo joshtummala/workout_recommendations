@@ -139,6 +139,6 @@ REST_FRAMEWORK = {
 }
 
 # neo4j credentials
-NEO4J_URI = "bolt://localhost:7687"
+NEO4J_URI = "bolt://neo4j:7687"
 NEO4J_USERNAME = "neo4j"
 NEO4J_PASSWORD = "password"
