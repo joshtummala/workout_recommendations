@@ -242,7 +242,7 @@ class ExerciseRecommendationView(APIView):
         with neo4j.session() as session:
             result = session.run(f"""
             MATCH (e:Exercise)-[rel]->(e2:Exercise)
-            WHERE e.id IN [{','.join(map(lambda i: str(i), workout.exercises.all().values_list('id', flat=True)))}]
+            WHERE e.id IN [{','.join(map(lambda i: str(i), workout.exercises.all().values_list('id', flat=True)))}] AND NOT e2.id IN [{','.join(map(lambda i: str(i), workout.exercises.all().values_list('id', flat=True)))}]
             WITH e2, rel, sum(rel.times) as total_relationships 
             ORDER BY (0.7 * rel.times/total_relationships) + (0.3 * e2.rating/5) DESC
             RETURN collect(DISTINCT e2.id)""")
