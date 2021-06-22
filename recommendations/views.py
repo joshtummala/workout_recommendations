@@ -211,7 +211,7 @@ class WorkoutViewSet(viewsets.ViewSet):
                     session.run(f"""
                     MATCH (u:User)
                     MATCH (e:Exercise{{id: {exercise.id}}})
-                    WHERE (u)-[:{Exercise.USER_RELATIONSHIP}]-(e)
+                    WHERE NOT (u)-[:{Exercise.USER_RELATIONSHIP}]-(e)
                     CREATE (u)-[rel:{Exercise.USER_RELATIONSHIP}{{times:1}}]->(e)
                     """)
                     workout.exercises.add(exercise)
