@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.utils.timezone import now
+
+from recommendations.utils import date_now
 
 class BodyPart(models.Model):
     """ Represents a human body part """
@@ -22,4 +23,4 @@ class Workout(models.Model):
     name = models.CharField(max_length=100, blank=True)
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     exercises = models.ManyToManyField(Exercise)
-    day = models.DateField(default=lambda : now().date(), blank=True)
+    day = models.DateField(default=date_now, blank=True)

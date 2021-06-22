@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.utils.timezone import now
 
 from neo4j import GraphDatabase
 
@@ -25,6 +26,9 @@ class Neo4jUtils:
     
     def run(self, query):
         with self.session() as session:
-            session.run(query)
+            return session.run(query)
 
 
+def date_now():
+    """ Return the Date object of now """
+    return now().date()

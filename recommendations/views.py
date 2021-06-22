@@ -9,6 +9,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
 neo4j = Neo4jUtils()
 
@@ -185,38 +186,68 @@ class WorkoutViewSet(viewsets.ViewSet):
 
         with transaction.atomic():
             with neo4j.session() as session:
-                for exercise in Exercise.objects.filter(name__in=add_exercises):
+                for exercise in Exercise.objects.filter(name__in=add_exercises).exclude(id__in=workout.exercises.all()):
                     session.run(f"""
-                    MATCH (e:Exercise)-[rel:{Exercise.EXERCISE_RELATIONSHIP}]->(:Exercise{{id: \"{exercise.id}\"}})
-                    WHERE e.id IN [{','.join(workout.exercises.all().values_list('id', flat=True))}]
+                    MATCH (e:Exercise)-[rel:{Exercise.EXERCISE_RELATIONSHIP}]->(:Exercise{{id: {exercise.id}}})
+                    WHERE e.id IN [{','.join(map(lambda i: str(i), workout.exercises.all().values_list('id', flat=True)))}]
                     SET rel.times = rel.times + 1
                     """)
                     session.run(f"""
-                    MATCH (e:Exercise)<-[rel:{Exercise.EXERCISE_RELATIONSHIP}]-(:Exercise{{id: \"{exercise.id}\"}})
-                    WHERE e.id IN [{','.join(workout.exercises.all().values_list('id', flat=True))}]
+                    MATCH (e:Exercise)<-[rel:{Exercise.EXERCISE_RELATIONSHIP}]-(:Exercise{{id: {exercise.id}}})
+                    WHERE e.id IN [{','.join(map(lambda i: str(i), workout.exercises.all().values_list('id', flat=True)))}]
                     SET rel.times = rel.times + 1
                     """)
                     session.run(f"""
                     MATCH (e1:Exercise)
-                    MATCH (e2:Exercise{{id: \"{exercise.id}\"}})
-                    WHERE NOT (e1)-[:{Exercise.EXERCISE_RELATIONSHIP}]-(e2)
+                    MATCH (e2:Exercise{{id: {exercise.id}}})
+                    WHERE e1.id IN [{','.join(map(lambda i: str(i), workout.exercises.all().values_list('id', flat=True)))}] AND NOT (e1)-[:{Exercise.EXERCISE_RELATIONSHIP}]-(e2)
                     CREATE (e1)-[rel:{Exercise.EXERCISE_RELATIONSHIP}{{times:1}}]->(e2)
-                    CREATE (e1)<-[rel:{Exercise.EXERCISE_RELATIONSHIP}{{times:1}}]-(e2)
+                    CREATE (e1)<-[rel2:{Exercise.EXERCISE_RELATIONSHIP}{{times:1}}]-(e2)
                     """)
                     session.run(f"""
-                    MATCH (:User)-[rel:{Exercise.USER_RELATIONSHIP}]->(:Exercise{{id: \"{exercise.id}\"}})
+                    MATCH (:User)-[rel:{Exercise.USER_RELATIONSHIP}]->(:Exercise{{id: {exercise.id}}})
                     SET rel.times = rel.times + 1
                     """)
                     session.run(f"""
                     MATCH (u:User)
-                    MATCH (e:Exercise{{id: \"{exercise.id}\"}})
-                    WHERE NOT (u)-[rel:{Exercise.USER_RELATIONSHIP}]-(e)
+                    MATCH (e:Exercise{{id: {exercise.id}}})
+                    WHERE (u)-[:{Exercise.USER_RELATIONSHIP}]-(e)
                     CREATE (u)-[rel:{Exercise.USER_RELATIONSHIP}{{times:1}}]->(e)
                     """)
                     workout.exercises.add(exercise)
+            workout.save()
 
-        workout.save()
         return Response(
             self.serializer_class(workout, context={'request': request}).data,
+            status=status.HTTP_200_OK
+        )
+
+class ExerciseRecommendationView(APIView):
+    """ View to get exercise recommendations based on an ongoing workout """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExerciseSerializer
+
+    TIMES_WEIGHT = 0.7
+    RATING_WEIGHT = 0.3
+
+    def get(self, request, workout_id):
+        """ Gets recommendations for exercises in a workout """
+        workout = Workout.objects.get(id=workout_id)
+        if workout.user != request.user:
+            return Response(
+                {"message": "You do not have access to the Workout"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        with neo4j.session() as session:
+            result = session.run(f"""
+            MATCH (e:Exercise)-[rel]->(e2:Exercise)
+            WHERE e.id IN [{','.join(map(lambda i: str(i), workout.exercises.all().values_list('id', flat=True)))}]
+            WITH e2, rel, sum(rel.times) as total_relationships 
+            ORDER BY (0.7 * rel.times/total_relationships) + (0.3 * e2.rating/5) DESC
+            RETURN collect(DISTINCT e2.id)""")
+            exercises = [Exercise.objects.get(id=i) for i in result.value()[0]]
+        return Response(
+            self.serializer_class(exercises, context={'request': request}, many=True).data,
             status=status.HTTP_200_OK
         )

@@ -16,7 +16,7 @@ class BodyPartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BodyPart
-        field = ['id', 'name']
+        fields = ['id', 'name']
 
 
 class ExerciseSerializer(serializers.ModelSerializer):
@@ -26,7 +26,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Exercise
-        field = ['id', 'name', 'body_parts', 'rating']
+        fields = ['id', 'name', 'body_parts', 'rating']
 
 
 class WorkoutSerializer(serializers.ModelSerializer):
